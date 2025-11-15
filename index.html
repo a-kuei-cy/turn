@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>幸運轉盤</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", Arial, sans-serif;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .popup {
+            background: #f5f1e8;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            padding: 40px 25px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: #333;
+            transform: scale(1.1);
+        }
+
+        .settings-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 40px;
+            height: 40px;
+            background: #5a7c32;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+
+        .settings-btn:hover {
+            background: #4a6b28;
+            transform: scale(1.1);
+        }
+
+        /* 抽獎頁面 */
+        .wheel-page {
+            display: block;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto 25px;
+            aspect-ratio: 1;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-top: 30px solid #fff;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            z-index: 5;
+        }
+
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 22%;
+            aspect-ratio: 1;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 3;
+        }
+
+        canvas {
+            border-radius: 50%;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            width: 100%;
+            height: 100%;
+        }
+
+        .title {
+            text-align: center;
+            color: #2d5016;
+            font-size: clamp(24px, 6vw, 32px);
+            font-weight: bold;
+            margin-bottom: 25px;
+            line-height: 1.2;
+        }
+
+        .spin-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #4a6b28 0%, #5a7c32 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: clamp(16px, 4vw, 20px);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            touch-action: manipulation;
+        }
+
+        .spin-btn:hover {
+            background: linear-gradient(135deg, #5a7c32 0%, #6a8c42 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(90, 124, 50, 0.4);
+        }
+
+        .spin-btn:active {
+            transform: translateY(0);
+        }
+
+        .spin-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-message {
+            text-align: center;
+            margin-top: 18px;
+            padding: 20px;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-radius: 15px;
+            font-size: clamp(18px, 5vw, 24px);
+            font-weight: bold;
+            color: #856404;
+            display: none;
+            line-height: 1.6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 3px solid #ffd700;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-icon {
+            font-size: clamp(30px, 8vw, 48px);
+            display: block;
+            margin-bottom: 10px;
+            animation: bounce 0.6s ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .result-text {
+            color: #2d5016;
+            font-size: clamp(16px, 4.5vw, 20px);
+            margin-bottom: 8px;
+        }
+
+        .result-prize {
+            color: #c8862d;
+            font-size: clamp(20px, 6vw, 28px);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 設定頁面 */
+        .settings-page {
+            display: none;
+        }
+
+        .settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 0;
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #5a6268;
+        }
+
+        .settings-title {
+            color: #2d5016;
+            font-size: clamp(20px, 5vw, 26px);
+            font-weight: bold;
+        }
+
+        .settings-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .prize-inputs {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding-right: 5px;
+        }
+
+        .prize-inputs::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .prize-inputs::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .prize-inputs::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        .prize-inputs::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .prize-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .prize-input-row input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #d4c4a8;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .prize-input-row input[type="text"]:focus {
+            outline: none;
+            border-color: #5a7c32;
+        }
+
+        .color-picker {
+            width: 50px;
+            height: 42px;
+            border: 2px solid #d4c4a8;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .remove-prize-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+
+        .remove-prize-btn:hover {
+            background: #c82333;
+            transform: scale(1.05);
+        }
+
+        .add-prize-btn, .update-wheel-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: clamp(14px, 3.5vw, 16px);
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .add-prize-btn {
+            background: #6c757d;
+            color: white;
+        }
+
+        .add-prize-btn:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .update-wheel-btn {
+            background: linear-gradient(135deg, #4a6b28 0%, #5a7c32 100%);
+            color: white;
+        }
+
+        .update-wheel-btn:hover {
+            background: linear-gradient(135deg, #5a7c32 0%, #6a8c42 100%);
+            transform: translateY(-2px);
+        }
+
+        .prize-count {
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        /* 平板螢幕 */
+        @media (max-width: 768px) {
+            .popup {
+                padding: 35px 20px;
+            }
+
+            .wheel-container {
+                max-width: 300px;
+                margin-bottom: 20px;
+            }
+
+            .close-btn, .settings-btn {
+                top: 12px;
+                width: 38px;
+                height: 38px;
+                font-size: 20px;
+            }
+
+            .settings-btn {
+                left: 12px;
+            }
+
+            .close-btn {
+                right: 12px;
+            }
+
+            .pointer {
+                border-left: 15px solid transparent;
+                border-right: 15px solid transparent;
+                border-top: 25px solid #fff;
+            }
+        }
+
+        /* 手機螢幕 */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .popup {
+                padding: 30px 18px;
+                border-radius: 15px;
+            }
+
+            .wheel-container {
+                max-width: 280px;
+                margin-bottom: 18px;
+            }
+
+            .close-btn, .settings-btn {
+                top: 10px;
+                width: 35px;
+                height: 35px;
+                font-size: 18px;
+            }
+
+            .settings-btn {
+                left: 10px;
+            }
+
+            .close-btn {
+                right: 10px;
+            }
+
+            .pointer {
+                border-left: 12px solid transparent;
+                border-right: 12px solid transparent;
+                border-top: 22px solid #fff;
+                top: -10px;
+            }
+
+            .spin-btn {
+                padding: 14px;
+            }
+
+            .result-message {
+                padding: 12px;
+                margin-top: 15px;
+            }
+
+            .settings-content {
+                padding: 15px;
+            }
+
+            .prize-inputs {
+                max-height: 300px;
+            }
+        }
+
+        /* 小型手機螢幕 */
+        @media (max-width: 360px) {
+            .popup {
+                padding: 25px 15px;
+            }
+
+            .wheel-container {
+                max-width: 250px;
+            }
+        }
+
+        /* 橫向模式 */
+        @media (max-height: 600px) and (orientation: landscape) {
+            body {
+                padding: 10px;
+            }
+
+            .popup {
+                padding: 20px 15px;
+                max-height: 95vh;
+                overflow-y: auto;
+            }
+
+            .wheel-container {
+                max-width: 200px;
+                margin-bottom: 15px;
+            }
+
+            .title {
+                margin-bottom: 15px;
+            }
+
+            .prize-inputs {
+                max-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="popup">
+        <button class="close-btn" onclick="closePopup()">✕</button>
+        <button class="settings-btn" onclick="showSettings()">⚙</button>
+
+        <!-- 抽獎頁面 -->
+        <div class="wheel-page" id="wheelPage">
+            <div class="wheel-container">
+                <div class="pointer"></div>
+                <canvas id="wheelCanvas" width="350" height="350"></canvas>
+                <div class="center-circle"></div>
+            </div>
+
+            <h1 class="title">轉出好福運</h1>
+            
+            <button class="spin-btn" id="spinBtn" onclick="spin()">立刻試試手氣</button>
+
+            <div class="result-message" id="resultMessage"></div>
+        </div>
+
+        <!-- 設定頁面 -->
+        <div class="settings-page" id="settingsPage">
+            <div class="settings-header">
+                <button class="back-btn" onclick="showWheel()">← 返回</button>
+                <h2 class="settings-title">自訂獎項設定</h2>
+            </div>
+
+            <div class="settings-content">
+                <div class="prize-count" id="prizeCount">目前獎項數量：12</div>
+                <div class="prize-inputs" id="prizeInputs"></div>
+                <button class="add-prize-btn" onclick="addPrizeInput()">+ 新增獎項</button>
+                <button class="update-wheel-btn" onclick="updateWheel()">儲存並返回</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let prizes = [
+            { text: '再接再厲', color: '#c8862d', textColor: '#fff' },
+            { text: '$77優惠券', color: '#c8862d', textColor: '#fff' },
+            { text: '免運費', color: '#2d5016', textColor: '#fff' },
+            { text: 'i 割', color: '#c8862d', textColor: '#fff' },
+            { text: '單對單', color: '#2d5016', textColor: '#fff' },
+            { text: '家啲唔買', color: '#c8862d', textColor: '#fff' },
+            { text: '包7爆米', color: '#2d5016', textColor: '#fff' },
+            { text: '謝謝參與', color: '#c8862d', textColor: '#fff' },
+            { text: '再嚟過', color: '#2d5016', textColor: '#fff' },
+            { text: '$11優惠券', color: '#c8862d', textColor: '#fff' },
+            { text: '再袋袋', color: '#2d5016', textColor: '#fff' },
+            { text: '唔該哂', color: '#c8862d', textColor: '#fff' }
+        ];
+
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
+
+        let isSpinning = false;
+        let currentRotation = 0;
+
+        // 頁面切換
+        function showSettings() {
+            document.getElementById('wheelPage').style.display = 'none';
+            document.getElementById('settingsPage').style.display = 'block';
+            initPrizeInputs();
+        }
+
+        function showWheel() {
+            document.getElementById('settingsPage').style.display = 'none';
+            document.getElementById('wheelPage').style.display = 'block';
+        }
+
+        // 初始化獎項輸入欄位
+        function initPrizeInputs() {
+            const container = document.getElementById('prizeInputs');
+            container.innerHTML = '';
+            prizes.forEach((prize, index) => {
+                addPrizeInputRow(prize.text, prize.color, index);
+            });
+            updatePrizeCount();
+        }
+
+        function addPrizeInputRow(text = '', color = '#c8862d', index = null) {
+            const container = document.getElementById('prizeInputs');
+            const row = document.createElement('div');
+            row.className = 'prize-input-row';
+            row.innerHTML = `
+                <input type="text" placeholder="獎項名稱" value="${text}" data-index="${index !== null ? index : prizes.length}">
+                <input type="color" class="color-picker" value="${color}" data-index="${index !== null ? index : prizes.length}">
+                <button class="remove-prize-btn" onclick="removePrize(this)">×</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function addPrizeInput() {
+            addPrizeInputRow();
+            updatePrizeCount();
+        }
+
+        function removePrize(btn) {
+            if (document.querySelectorAll('.prize-input-row').length > 2) {
+                btn.parentElement.remove();
+                updatePrizeCount();
+            } else {
+                alert('至少需要保留2個獎項！');
+            }
+        }
+
+        function updatePrizeCount() {
+            const count = document.querySelectorAll('.prize-input-row').length;
+            document.getElementById('prizeCount').textContent = `目前獎項數量：${count}`;
+        }
+
+        function updateWheel() {
+            const rows = document.querySelectorAll('.prize-input-row');
+            const newPrizes = [];
+            
+            rows.forEach(row => {
+                const textInput = row.querySelector('input[type="text"]');
+                const colorInput = row.querySelector('input[type="color"]');
+                const text = textInput.value.trim();
+                
+                if (text) {
+                    newPrizes.push({
+                        text: text,
+                        color: colorInput.value,
+                        textColor: '#fff'
+                    });
+                }
+            });
+
+            if (newPrizes.length < 2) {
+                alert('至少需要2個獎項才能抽獎！');
+                return;
+            }
+
+            prizes = newPrizes;
+            currentRotation = 0;
+            drawWheel();
+            showWheel();
+            alert('✅ 轉盤已更新成功！');
+        }
+
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const anglePerSlice = (2 * Math.PI) / prizes.length;
+            const halfSlice = anglePerSlice / 2;
+
+            prizes.forEach((prize, i) => {
+                // 讓第0個獎項的中心對齊頂部，所以起始角度要減去半個扇形
+                const startAngle = i * anglePerSlice + currentRotation - Math.PI / 2 - halfSlice;
+                const endAngle = startAngle + anglePerSlice;
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = prize.color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 文字放在扇形中間
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + anglePerSlice / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = prize.textColor;
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText(prize.text, radius - 30, 8);
+                ctx.restore();
+            });
+        }
+
+        drawWheel();
+
+        function spin() {
+            if (isSpinning) return;
+            
+            isSpinning = true;
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('resultMessage').style.display = 'none';
+
+            // 隨機選擇一個獎項
+            const winningIndex = Math.floor(Math.random() * prizes.length);
+            const anglePerSlice = (2 * Math.PI) / prizes.length;
+            const extraSpins = 5;
+            
+            // 要讓第 winningIndex 個獎項的中心對齊箭頭
+            // 需要逆時針旋轉，所以用負號
+            const targetRotation = (extraSpins * 2 * Math.PI) - (winningIndex * anglePerSlice);
+
+            const startTime = Date.now();
+            const duration = 4000;
+            const initialRotation = currentRotation;
+
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                currentRotation = initialRotation + (targetRotation - initialRotation) * easeOut;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isSpinning = false;
+                    document.getElementById('spinBtn').disabled = false;
+                    
+                    const prize = prizes[winningIndex];
+                    
+                    const resultMsg = document.getElementById('resultMessage');
+                    resultMsg.innerHTML = `
+                        <span class="result-icon">🎉</span>
+                        <div class="result-text">恭喜您抽中</div>
+                        <div class="result-prize">${prize.text}</div>
+                    `;
+                    resultMsg.style.display = 'block';
+                }
+            }
+
+            animate();
+        }
+
+        function closePopup() {
+            document.querySelector('.popup').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
